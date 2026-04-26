@@ -3,7 +3,7 @@
 
 # Path to your Oh My Zsh installation.
 export ZSH="$HOME/.oh-my-zsh"
-
+export EDITOR="micro"
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time Oh My Zsh is loaded, in which case,
 # to know which specific one was loaded, run: echo $RANDOM_THEME
@@ -154,7 +154,18 @@ if [ -f '/Users/thereisnocake/Downloads/google-cloud-sdk/path.zsh.inc' ]; then .
 # The next line enables shell command completion for gcloud.
 if [ -f '/Users/thereisnocake/Downloads/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/thereisnocake/Downloads/google-cloud-sdk/completion.zsh.inc'; fi
 
+# exits yazi at the location pointed by it
+function y() {
+	local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+	yazi "$@" --cwd-file="$tmp"
+	IFS= read -r -d '' cwd < "$tmp"
+	[ -n "$cwd" ] && [ "$cwd" != "$PWD" ] && builtin cd -- "$cwd"
+	rm -f -- "$tmp"
+}
 #launch fastfetch on new terminal
 fastfetch
 
 
+
+# Added by Antigravity
+export PATH="/Users/thereisnocake/.antigravity/antigravity/bin:$PATH"

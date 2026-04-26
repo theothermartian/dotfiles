@@ -1,8 +1,9 @@
 font-family = JetBrains Mono
+#custom-shader = ~/.config/ghostty/shaders/starfield.glsl
 #font-family = Iosevka Nerd Font
 # font-family = SFMono Nerd Font 
 font-size = 16
-theme = catppuccin-mocha
+theme = Catppuccin Mocha
 shell-integration = zsh
 macos-titlebar-style = tabs
 shell-integration-features =sudo,no-title
