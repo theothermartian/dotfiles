@@ -1,0 +1,10 @@
+{
+    "workbench.colorTheme": "Catppuccin Mocha",
+    "workbench.iconTheme": "material-icon-theme",
+    "python.defaultInterpreterPath": "/usr/bin/python3",
+    "github.copilot.advanced": {},
+    "python.REPL.enableREPLSmartSend": false,
+    "python.analysis.typeCheckingMode": "basic",
+    "claudeCode.preferredLocation": "panel",
+    "extensions.ignoreRecommendations": true
+}

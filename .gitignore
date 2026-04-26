@@ -1,0 +1,19 @@
+# Zed runtime/session data
+zed/.config/zed/conversations/
+zed/.config/zed/embeddings/
+zed/.config/zed/prompts/
+zed/.config/zed/*.log
+zed/.config/zed/node_runtime/
+
+# Neovim runtime
+nvim/.config/nvim/.repro/
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Secrets (never track these)
+**/*token*
+**/*secret*
+**/*credentials*
+**/*passwd*
