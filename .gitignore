@@ -8,6 +8,10 @@ zed/.config/zed/node_runtime/
 # Neovim runtime
 nvim/.config/nvim/.repro/
 
+# Micro runtime
+micro/.config/micro/bindings.json
+micro/.config/micro/buffers/
+
 # macOS
 .DS_Store
 **/.DS_Store

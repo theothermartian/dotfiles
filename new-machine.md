@@ -1,19 +1,29 @@
 # New Mac Setup Guide
 
-> **For LLMs:** This file is a complete, ordered instruction set to reproduce this Mac setup on a fresh machine. Execute every step in sequence. Each section includes verification commands — run them before moving on. If a step fails, diagnose before continuing; do not skip.
+> **For LLMs:** This file is a complete, ordered instruction set to reproduce this Mac setup on a fresh machine. Execute every step in sequence. Each section includes verification commands. If a step fails, diagnose before continuing; do not skip.
+>
+> Before changing anything:
+> - Inspect the current machine state first. Check whether Homebrew, Ghostty, `gh`, and the target config files already exist.
+> - Do not append Homebrew init lines to `~/.zprofile` if this repo will later stow its own `.zprofile`.
+> - Audit the repo for old machine-specific absolute paths before applying it:
+>   ```bash
+>   rg '/Users/|thereisnocake|Downloads/google-cloud-sdk' ~/dotfiles
+>   ```
+>   Replace old home-directory paths with `$HOME` where appropriate before stowing.
+> - Prefer idempotent, non-interactive commands. Avoid installer scripts that rewrite shell startup files when a plain `git clone` will do.
 
 ---
 
 ## Prerequisites
 
-- macOS 13+ (Ventura or later), Apple Silicon (M-series) preferred
+- macOS 13+ (Ventura or later), Apple Silicon preferred
 - Internet connection
-- Apple ID signed in (for App Store apps if needed)
-- This guide assumes a fresh user account with no prior setup
+- Apple ID signed in if App Store apps are needed
+- This guide assumes a fresh or near-fresh user account
 
 ---
 
-## Step 1 — Xcode Command Line Tools
+## Step 1 - Xcode Command Line Tools
 
 Required by Homebrew and git.
 
@@ -30,29 +40,29 @@ xcode-select -p
 
 ---
 
-## Step 2 — Homebrew
+## Step 2 - Homebrew
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
-After install, add Homebrew to PATH (Apple Silicon):
+After install, load Homebrew into the current shell:
 
 ```bash
-echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
 eval "$(/opt/homebrew/bin/brew shellenv)"
 ```
+
+> Do **not** append this to `~/.zprofile` here. The repo already tracks `zsh/.zprofile`, and writing to `~/.zprofile` now creates an avoidable stow conflict later.
 
 Verify:
 
 ```bash
 brew --version
-# Expected: Homebrew 4.x.x
 ```
 
 ---
 
-## Step 3 — Clone dotfiles repo
+## Step 3 - Clone dotfiles repo
 
 ```bash
 git clone https://github.com/theothermartian/dotfiles ~/dotfiles
@@ -63,18 +73,24 @@ Verify:
 
 ```bash
 ls ~/dotfiles
-# Expected: Brewfile  ghostty  github  micro  nvim  ohmyposh  README.md  vscode  yazi  zed  zsh  new-machine.md
 ```
 
 ---
 
-## Step 4 — Install all packages from Brewfile
+## Step 4 - Install packages from Brewfile
 
 ```bash
 brew bundle --file=~/dotfiles/Brewfile
 ```
 
-This installs: neovim, fzf, fd, ripgrep, bat, eza, yazi, micro, oh-my-posh, zoxide, fastfetch, gh, stow, tmux, btop, tldr, node, uv, JetBrains Mono font, Ghostty terminal, and more.
+This installs the CLI tools, fonts, terminal apps, editors, and most of the package-managed base.
+
+> If `docker-desktop` fails with an error about `/usr/local/cli-plugins`, fix the directory and retry just that cask:
+> ```bash
+> sudo mkdir -p /usr/local/cli-plugins
+> sudo chown "$USER":admin /usr/local/cli-plugins
+> brew install --cask docker-desktop
+> ```
 
 Verify a few key tools:
 
@@ -87,29 +103,29 @@ ghostty --version
 
 ---
 
-## Step 5 — Install Oh My Zsh
+## Step 5 - Install Oh My Zsh
 
 ```bash
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+git clone https://github.com/ohmyzsh/ohmyzsh.git ~/.oh-my-zsh
 ```
 
-This installs to `~/.oh-my-zsh`. Say yes if it asks to change your shell to zsh.
+This installs to `~/.oh-my-zsh` without running the interactive installer or rewriting shell startup files.
 
 Verify:
 
 ```bash
 ls ~/.oh-my-zsh
-# Expected: oh-my-zsh.sh, plugins/, themes/, etc.
 ```
 
 ---
 
-## Step 6 — Install zsh plugins
+## Step 6 - Install zsh plugins
 
 The `.zshrc` uses three plugins that are not bundled with Oh My Zsh:
 
 ```bash
 ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
+mkdir -p "$ZSH_CUSTOM/plugins"
 
 git clone https://github.com/zsh-users/zsh-syntax-highlighting \
   "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
@@ -125,98 +141,118 @@ Verify:
 
 ```bash
 ls "$ZSH_CUSTOM/plugins/"
-# Expected: zsh-syntax-highlighting  zsh-autosuggestions  zsh-autocomplete
 ```
 
 ---
 
-## Step 7 — Apply dotfiles with GNU stow
+## Step 7 - Apply dotfiles with GNU stow
 
-Stow creates symlinks from the dotfiles repo into the home directory. Run it for each package:
+First dry-run to detect conflicts:
 
 ```bash
 cd ~/dotfiles
-
-# Shell config (.zshrc, .zprofile → ~/)
-stow --target="$HOME" zsh
-
-# Git config (.gitconfig → ~/)
-stow --target="$HOME" github
-
-# Terminal, prompt, editor configs (→ ~/.config/)
-stow --target="$HOME" ghostty
-stow --target="$HOME" ohmyposh
-stow --target="$HOME" micro
-stow --target="$HOME" nvim
-stow --target="$HOME" yazi
-stow --target="$HOME" zed
-
-# VS Code settings (→ ~/Library/Application Support/Code/User/)
-stow --target="$HOME" vscode
+stow -nv --target="$HOME" zsh github ghostty ohmyposh micro nvim yazi zed vscode
 ```
 
-> **If stow errors with "existing target"**: The file already exists at the destination. Back it up and remove it first:
-> ```bash
-> mv ~/.zshrc ~/.zshrc.bak   # example for .zshrc
-> stow --target="$HOME" zsh
-> ```
+If any targets already exist, remove or back them up before continuing. Common examples:
+
+```bash
+rm -f ~/.zprofile ~/.zshrc ~/.gitconfig
+rm -rf ~/.config/ghostty ~/.config/ohmyposh ~/.config/micro ~/.config/nvim ~/.config/yazi ~/.config/zed
+rm -rf "$HOME/Library/Application Support/Code"
+```
+
+Then apply the packages:
+
+```bash
+cd ~/dotfiles
+stow --target="$HOME" zsh github ghostty ohmyposh micro nvim yazi zed vscode
+```
 
 Verify key symlinks:
 
 ```bash
-ls -la ~/.zshrc ~/.gitconfig ~/.config/ghostty ~/.config/nvim ~/.config/yazi
-# All should show -> pointing into ~/dotfiles/
+ls -la ~/.zshrc ~/.zprofile ~/.gitconfig ~/.config/ghostty ~/.config/nvim ~/.config/yazi
 ```
 
 ---
 
-## Step 8 — Reload shell
+## Step 8 - Sync Yazi plugins
+
+The Yazi config expects external plugins declared in `package.toml`:
 
 ```bash
-source ~/.zshrc
+ya pkg install
+```
+
+Verify:
+
+```bash
+find ~/.local/state/yazi/packages -maxdepth 2 -type d | head
+```
+
+> Note: `ya pkg install` may rewrite `package.toml`. If the repo carries custom previewer entries there, verify they still exist after the install.
+
+---
+
+## Step 9 - Reload shell
+
+```bash
+exec zsh -l
 ```
 
 Or open a new terminal window. You should see:
-- fastfetch system info on launch
-- Oh My Posh prompt (Catppuccin colors, git branch info)
+- `fastfetch` system info on launch
+- Oh My Posh prompt
 - Aliases available: `ll`, `ld`, `lf`, `mi`, `srch`
 
-If the prompt shows garbled characters: the JetBrains Mono Nerd Font isn't set in your terminal. In Ghostty, it's already configured via the dotfiles config.
+If the prompt shows garbled characters, make sure the terminal font is set to JetBrains Mono Nerd Font. Ghostty is already configured for this repo.
 
 ---
 
-## Step 9 — First Neovim launch (LazyVim plugin install)
+## Step 10 - First Neovim launch
 
 ```bash
 nvim
 ```
 
-LazyVim will automatically download and install all plugins on first launch. Wait for it to complete (watch the progress in the `:Lazy` window). Exit and reopen nvim to confirm everything loaded cleanly.
+LazyVim will automatically download and install all plugins on first launch. Wait for it to complete, then exit and reopen `nvim` to confirm everything loaded cleanly.
+
+> If automating headlessly, use:
+> ```bash
+> nvim --headless "+Lazy! restore" +qa
+> ```
+> Then still launch `nvim` once interactively. Some Mason installs can still be finishing during the first headless bootstrap.
 
 ---
 
-## Step 10 — VS Code extensions
+## Step 11 - VS Code extensions
 
-Open VS Code and install these extensions (Cmd+Shift+X):
+If the `code` CLI is not in `PATH`, open VS Code once and run:
 
-- **Catppuccin Mocha** theme: `catppuccin.catppuccin-vsc`
-- **Material Icon Theme**: `PKief.material-icon-theme`
-- **GitHub Copilot**: `GitHub.copilot`
-- **Python**: `ms-python.python`
-- **Pylance**: `ms-python.vscode-pylance`
+- `Shell Command: Install 'code' command in PATH`
 
-Or install via CLI:
+Then install these extensions:
+
+- `catppuccin.catppuccin-vsc`
+- `PKief.material-icon-theme`
+- `GitHub.copilot`
+- `ms-python.python`
+- `ms-python.vscode-pylance`
+
+CLI form:
 
 ```bash
 code --install-extension catppuccin.catppuccin-vsc
 code --install-extension PKief.material-icon-theme
 code --install-extension GitHub.copilot
 code --install-extension ms-python.python
+code --install-extension ms-python.vscode-pylance
 ```
 
 ---
 
-## Step 11 — npm globals
+## Step 12 - npm globals
 
 ```bash
 npm install -g @anthropic-ai/claude-code
@@ -225,7 +261,7 @@ npm install -g notebooklm-mcp
 
 ---
 
-## Step 12 — Python tools (via uv/pip)
+## Step 13 - Python tools
 
 ```bash
 pip3 install fastmcp mcp notebooklm-cli yt-dlp rich
@@ -233,32 +269,35 @@ pip3 install fastmcp mcp notebooklm-cli yt-dlp rich
 
 ---
 
-## Step 13 — Manual steps (cannot be automated)
+## Step 14 - Manual steps
 
 These require logins or account-specific setup:
 
-1. **SSH keys** — Generate a new key pair or copy from old machine:
+1. **SSH keys**
    ```bash
    ssh-keygen -t ed25519 -C "sayak1111@gmail.com"
-   # Add ~/.ssh/id_ed25519.pub to GitHub: https://github.com/settings/keys
    ```
+   Add `~/.ssh/id_ed25519.pub` to GitHub.
 
-2. **GitHub CLI auth**:
+2. **GitHub CLI auth**
    ```bash
    gh auth login
-   # Choose GitHub.com → HTTPS → browser
    ```
 
-3. **Google Cloud SDK** (if needed):
+3. **Google Cloud SDK** if needed
    ```bash
    brew install --cask google-cloud-sdk
    gcloud auth login
    gcloud config set project YOUR_PROJECT_ID
    ```
 
-4. **Ghostty as default terminal** — Set in System Settings → Desktop & Dock → Default web browser (look for terminal setting) or right-click a .sh file.
+4. **Docker Desktop first launch**
+   Open Docker from `/Applications` once and let it finish first-run setup.
 
-5. **Rust/Cargo** (if needed):
+5. **Ghostty as primary terminal**
+   Open Ghostty manually and use it as the main terminal. macOS does not provide a single system-wide "default terminal" setting like it does for browsers.
+
+6. **Rust/Cargo** if needed
    ```bash
    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
    ```
@@ -267,27 +306,30 @@ These require logins or account-specific setup:
 
 ## Verification Checklist
 
-Run these after completing all steps to confirm setup is correct:
+Run these after completing all steps:
 
 ```bash
 # Shell
-echo $SHELL          # /bin/zsh
-echo $ZSH            # ~/.oh-my-zsh
+echo $SHELL
+echo $ZSH
 
 # Tools
 which nvim fzf eza bat fd rg yazi micro oh-my-posh zoxide fastfetch
-# All should print paths under /opt/homebrew/bin/
 
 # Symlinks
-ls -la ~/.zshrc ~/.gitconfig ~/.config/ghostty ~/.config/nvim ~/.config/yazi ~/.config/ohmyposh
-# All should be symlinks -> ~/dotfiles/...
+ls -la ~/.zshrc ~/.zprofile ~/.gitconfig ~/.config/ghostty ~/.config/nvim ~/.config/yazi ~/.config/ohmyposh
 
-# Oh My Posh prompt
+# Oh My Posh
 oh-my-posh --version
 
 # Aliases
 type ll ld lf srch mi
-# All should resolve
+
+# Yazi packages
+find ~/.local/state/yazi/packages -maxdepth 2 -type d | head
+
+# Docker
+test -d /Applications/Docker.app && echo "Docker OK"
 
 # Neovim
 nvim --headless -c "checkhealth" -c "qa" 2>&1 | tail -20
@@ -299,9 +341,11 @@ nvim --headless -c "checkhealth" -c "qa" 2>&1 | tail -20
 
 | Problem | Fix |
 |---------|-----|
-| `stow: existing target` | `mv <target> <target>.bak` then re-run stow |
+| `stow: existing target` | Remove or back up the conflicting target, then re-run `stow` |
 | Prompt shows `?` boxes | Set terminal font to JetBrains Mono Nerd Font |
-| `brew bundle` fails | Run `brew update && brew doctor` first |
-| LazyVim plugins don't load | Delete `~/.local/share/nvim` and relaunch nvim |
-| `zsh-autocomplete` slows shell | Remove it from plugins in `.zshrc` |
+| `brew bundle` fails on `docker-desktop` | Create `/usr/local/cli-plugins`, fix ownership, then retry the cask |
+| LazyVim plugins don't load | Delete `~/.local/share/nvim` and relaunch `nvim` |
+| Mason/treesitter installs race in headless bootstrap | Run the headless bootstrap once, then open `nvim` interactively and let installs finish |
+| `zsh-autocomplete` slows shell | Remove it from `plugins=(...)` in `.zshrc` |
 | Oh My Posh theme not found | Verify `~/.config/ohmyposh/cat.json` symlink exists |
+| Yazi plugins missing | Re-run `ya pkg install` after the dotfiles are stowed |

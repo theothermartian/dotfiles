@@ -1,5 +1,3 @@
-tap "homebrew/bundle"
-
 # Shell & prompt
 brew "oh-my-posh"
 brew "zoxide"
